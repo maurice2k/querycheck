@@ -1,0 +1,24 @@
+{
+  "name": "maurice2k/querycheck",
+  "version": "1.0.0",
+  "description": "Evaluate logical JSON querys (MongoDB style)",
+  "author": "Moritz Fain <moritz@fain.io>",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "date-fns": "^2.14.0",
+    "jest": "^26.0.1"
+  },
+  "main": "src/querycheck.js",
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maurice2k/querycheck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maurice2k/querycheck/issues"
+  },
+  "homepage": "https://github.com/maurice2k/querycheck#readme"
+}
