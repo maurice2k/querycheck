@@ -31,7 +31,7 @@ $ npm install maurice2k/querycheck
 
 ```javascript
 
-const QueryCheck = require('maurice2k/querycheck');
+const QueryCheck = require('querycheck');
 
 const vars = {
     now: {

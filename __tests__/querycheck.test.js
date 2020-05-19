@@ -1,6 +1,6 @@
 'use strict';
 
-const QueryCheck = require('../src/queryCheck.js');
+const QueryCheck = require('../src/querycheck.js');
 
 const vars = {
     now: {
