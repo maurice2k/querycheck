@@ -1,5 +1,5 @@
 {
-  "name": "maurice2k/querycheck",
+  "name": "@maurice2k/querycheck",
   "version": "1.0.0",
   "description": "Evaluate logical JSON querys (MongoDB style)",
   "author": "Moritz Fain <moritz@fain.io>",
