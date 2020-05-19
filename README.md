@@ -1,3 +1,5 @@
+![Jest unit testing](https://github.com/maurice2k/querycheck/workflows/Jest%20unit%20testing/badge.svg)
+
 # QueryCheck
 
 *QueryCheck* is a logical JSON query evaluator which uses the [MongoDB query style](https://docs.mongodb.com/manual/tutorial/query-documents/).
