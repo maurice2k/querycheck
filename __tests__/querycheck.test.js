@@ -425,6 +425,13 @@ function concatFunc(params, data) {
 }
 
 function varFunc(params, data) {
+    if (typeof(params) == 'string') {
+        // shortcut syntax {"$var": "varName"}
+        params = {name: params};
+    } else if (typeof(params.name) === 'undefined') {
+        return undefined;
+    }
+
     return this.getVariableValue(params.name, data);
 }
 
