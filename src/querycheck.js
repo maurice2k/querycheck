@@ -163,7 +163,7 @@ class QueryCheck {
                     data = data[parts[i]];
                 }
 
-                if (data === undefined) {
+                if (data === undefined || data === null) {
                     break;
                 }
             }

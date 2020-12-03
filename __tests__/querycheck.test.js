@@ -164,6 +164,20 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
+        test('$eq short syntax // myNull.but.this.does.not.exist == null with setUndefinedEqualsNull(true)', () => {
+            const qc = new QueryCheck({ "myNull.but.this.does.not.exist": null });
+            qc.setStrictMode(strictMode);
+            qc.setUndefinedEqualsNull(true);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$eq short syntax // myInt.but.this.does.not.exist == null with setUndefinedEqualsNull(true)', () => {
+            const qc = new QueryCheck({ "myInt.but.this.does.not.exist": null });
+            qc.setStrictMode(strictMode);
+            qc.setUndefinedEqualsNull(true);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
         test('$eq full syntax // string == different string', () => {
             const qc = new QueryCheck({ myString: { "$eq": "this is a different string" } });
             qc.setStrictMode(strictMode);
