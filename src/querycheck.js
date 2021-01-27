@@ -233,10 +233,25 @@ class QueryCheck {
         if (this.strictMode) {
             throw new TypeError(`$eq: variable ${variableName} is of type ${typeof(variableValue)} while operand is of type ${typeof(operand)}`);
         }
+
+        if (typeof(variableValue) === 'string' && typeof(operand) === 'number') {
+            return variableValue === String(operand);
+        } else if (typeof(variableValue) === 'number' && typeof(operand) === 'string') {
+            return String(variableValue) === operand;
+        }
+
         return false;
     }
 
     _evalNe(variableName, variableValue, operand) {
+        if (!this.strictMode) {
+            if (typeof(variableValue) === 'string' && typeof(operand) === 'number') {
+                return variableValue !== String(operand);
+            } else if (typeof(variableValue) === 'number' && typeof(operand) === 'string') {
+                return String(variableValue) !== operand;
+            }
+        }
+
         if (typeof(variableValue) != typeof(operand)) {
             return true;
         }
@@ -248,6 +263,7 @@ class QueryCheck {
         if (this.strictMode && typeof(variableValue) != typeof(operand) && variableValue !== null) {
             throw new TypeError(`$gt: variable ${variableName} is of type ${typeof(variableValue)} while operand is of type ${typeof(operand)}`);
         }
+
         return variableValue > operand;
     }
 
@@ -326,6 +342,12 @@ class QueryCheck {
 
         if (typeof(a) === 'object' && typeof(b) === 'object') {
             return this._isEqualObject(a, b);
+        }
+
+        if (typeof(a) === 'string' && typeof(b) === 'number') {
+            return a === String(b);
+        } else if (typeof(a) === 'number' && typeof(b) === 'string') {
+            return String(a) === b;
         }
 
         return false;

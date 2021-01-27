@@ -14,6 +14,7 @@ const vars = {
     myStringFlavor: "strawberry",
     myStringPrime: "prime number 137",
     myInt: 137,
+    myIntAsString: "137",
     myFloat: 137.12345,
     myBoolTrue: true,
     myBoolFalse: false,
@@ -22,6 +23,12 @@ const vars = {
     myArrayOfStrings: ["vanilla", "strawberry", "chocolate"],
     myArrayOfObjects: [{x: 10, y: 11}, {x: 20, y: 21}, {x: 40, y: 41}],
     mySimpleObject: {x: 30, y: 31},
+    myLookup: {
+        0: "zero",
+        "1": "one",
+        user: "maurice"
+    },
+    lookupKey: "user",
     myObject: {
         userName: "maurice",
         firstName: "First",
@@ -69,23 +76,43 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // int == int', () => {
+        test('$eq short syntax // int[137] == int[137]', () => {
             const qc = new QueryCheck({ myInt: 137 });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // float == float', () => {
+        test('$eq short syntax // int[137] == string["137"]', () => {
+            const qc = new QueryCheck({ myInt: "137" });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
+        });
+
+        test('$eq short syntax // string["137"] == int[137]', () => {
+            const qc = new QueryCheck({ myIntAsString: 137 });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
+        });
+
+        test('$eq short syntax // float[137.12345] == float[137.12345', () => {
             const qc = new QueryCheck({ myFloat: 137.12345 });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // float == float as string', () => {
+        test('$eq short syntax // float[137.12345] == string["137.12345"]', () => {
             const qc = new QueryCheck({ myFloat: "137.12345" });
             qc.setStrictMode(strictMode);
             if (!strictMode) {
-                expect(qc.test(vars)).not.toBeTruthy();
+                expect(qc.test(vars)).toBeTruthy();
             } else {
                 expect(() => qc.test(vars)).toThrow(TypeError);
             }
@@ -263,28 +290,88 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$gt full syntax // int > int', () => {
+        test('$ne full syntax // int[137] != string["138"]', () => {
+            const qc = new QueryCheck({ myInt: {"$ne": "138"} });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeTruthy();
+            } else {
+                expect(qc.test(vars)).toBeTruthy();
+            }
+        });
+
+        test('$ne full syntax // int[137] != string["137"]', () => {
+            const qc = new QueryCheck({ myInt: {"$ne": "137"} });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeFalsy();
+            } else {
+                expect(qc.test(vars)).toBeTruthy();
+            }
+        });
+
+        test('$gt full syntax // int[137] > int[136]', () => {
             const qc = new QueryCheck({ myInt: { "$gt": 136 } });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$gt full syntax // int < int', () => {
+        test('$gt full syntax // int[137] > string["136"]', () => {
+            const qc = new QueryCheck({ myInt: { "$gt": "136" } });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
+        });
+
+        test('$gt full syntax // int[137] > int[138]', () => {
             const qc = new QueryCheck({ myInt: { "$gt": 138 } });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).not.toBeTruthy();
         });
 
-        test('$lt full syntax // int < int', () => {
+        test('$gt full syntax // int[137] > string["138"]', () => {
+            const qc = new QueryCheck({ myInt: { "$gt": "138" } });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).not.toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
+        });
+
+        test('$lt full syntax // int[137] < int[138]', () => {
             const qc = new QueryCheck({ myInt: { "$lt": 138 } });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$lt full syntax // int > int', () => {
+        test('$lt full syntax // int[137] < string["138"]', () => {
+            const qc = new QueryCheck({ myInt: { "$lt": "138" } });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
+        });
+
+        test('$lt full syntax // int[137] < int[136]', () => {
             const qc = new QueryCheck({ myInt: { "$lt": 136 } });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).not.toBeTruthy();
+        });
+
+        test('$lt full syntax // int[137] < string["136"]', () => {
+            const qc = new QueryCheck({ myInt: { "$lt": "136" } });
+            qc.setStrictMode(strictMode);
+            if (!strictMode) {
+                expect(qc.test(vars)).not.toBeTruthy();
+            } else {
+                expect(() => qc.test(vars)).toThrow(TypeError);
+            }
         });
 
         test('$regex full syntax // string matches other string', () => {
@@ -386,6 +473,7 @@ function combinedTests(strictMode) {
 let opEvalFuncs = {
     '$time': timeFunc,
     '$concat': concatFunc,
+    '$lookup': lookupFunc,
     '$var': varFunc,
 };
 
@@ -436,6 +524,24 @@ function concatFunc(params, data) {
         str += String(opEvaluator.apply(this, [item, data]));
     }
     return str;
+}
+
+function lookupFunc(params, data) {
+    params.default = params.default || null;
+
+    if (typeof(params.key) === 'undefined') {
+        return params.default;
+    }
+
+    params.key = opEvaluator.apply(this, [params.key, data]);
+
+    if (typeof(params.map) === 'undefined' || params.map === null || typeof(params.map) !== 'object') {
+        return params.default;
+    }
+
+    params.map = opEvaluator.apply(this, [params.map, data]);
+
+    return params.map[params.key] || params.default;
 }
 
 function varFunc(params, data) {
@@ -510,6 +616,33 @@ function extendingTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
+        test('$lookup function with static map/key (key exists)', () => {
+            const qc = new QueryCheck({ "myObject.userName": {"$lookup": {"map": {"this": "is", "a": "lookup", "user": "maurice"}, "key": "user", "default": null} }});
+            qc.setOperandEvaluator(opEvaluator);
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$lookup function with variable map/key (key exists)', () => {
+            const qc = new QueryCheck({ "myObject.userName": {"$lookup": {"map": {"$var": "myLookup"}, "key": {"$var": "lookupKey"}, "default": null} }});
+            qc.setOperandEvaluator(opEvaluator);
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$lookup function with variable map and static key (where key does not exist)', () => {
+            const qc = new QueryCheck({ "myObject.userName": {"$lookup": {"map": {"$var": "myLookup"}, "key": "non-existant"} }});
+            qc.setOperandEvaluator(opEvaluator);
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).not.toBeTruthy();
+        });
+
+        test('$lookup function with variable map and static key (where key does not exist but default matches)', () => {
+            const qc = new QueryCheck({ "myObject.userName": {"$lookup": {"map": {"$var": "myLookup"}, "key": "non-existant", "default": "maurice"} }});
+            qc.setOperandEvaluator(opEvaluator);
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeTruthy();
+        });
 
     });
 }
