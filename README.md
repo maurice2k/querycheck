@@ -24,7 +24,7 @@ As well as the following logical operators:
 Install with npm:
 
 ```bash
-$ npm install maurice2k/querycheck
+$ npm install querycheck
 ```
 
 ## Simple example
