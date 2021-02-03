@@ -487,12 +487,15 @@ function timeFunc(params, data) {
         params.date = opEvaluator.apply(this, [params.date, data]);
     }
 
-    if (typeof(params.date) == "string") {
-        dateLocal = dateFns.parseISO(params.date);
+    if (typeof(params.date) == 'string') {
+        if (typeof(params.inputFormat) == 'string' && params.inputFormat != '') {
+            dateLocal = dateFns.parse(params.date, params.inputFormat, new Date());
+        } else {
+            dateLocal = dateFns.parseISO(params.date);
+        }
     } else {
         dateLocal = new Date();
     }
-
 
     if (params.sub) {
         result = dateFns.sub(dateLocal, params.sub);
@@ -576,6 +579,13 @@ function extendingTests(strictMode) {
 
         test('$time function returns given date', () => {
             const qc = new QueryCheck({ "now.isoDateTime": {"$time": {"date": "2020-05-21T13:59:48"} }});
+            qc.setOperandEvaluator(opEvaluator);
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$time function returns given date using different input format', () => {
+            const qc = new QueryCheck({ "now.isoDateTime": {"$time": {"date": "21.05.2020, 13:59:48", "inputFormat": "dd.MM.yyyy, HH:mm:ss"} }});
             qc.setOperandEvaluator(opEvaluator);
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
