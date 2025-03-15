@@ -152,7 +152,7 @@ class QueryCheck {
         let parts = str.match(/(\\\.|[^.]+?)+/g);
         const re = /\[(\d+)\]$/;
 
-        if (typeof(data) !== 'undefined') {
+        if (typeof(data) !== 'undefined' && data !== null) {
 
             for (let i = 0; i < parts.length; ++i) {
                 const matches = re.exec(parts[i]);
