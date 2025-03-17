@@ -46,6 +46,13 @@ class QueryCheck {
     }
 
     test(data) {
+        if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+            if (this.strictMode) {
+                throw new TypeError('Input data must be a hash/object');
+            }
+            return false;
+        }
+
         return this._evalQuery(this.query, data);
     }
 
@@ -152,22 +159,18 @@ class QueryCheck {
         let parts = str.match(/(\\\.|[^.]+?)+/g);
         const re = /\[(\d+)\]$/;
 
-        if (typeof(data) !== 'undefined' && data !== null) {
-
-            for (let i = 0; i < parts.length; ++i) {
-                const matches = re.exec(parts[i]);
-                if (matches) {
-                    let idx = parseFloat(matches[1]);
-                    data = data[idx];
-                } else {
-                    data = data[parts[i]];
-                }
-
-                if (data === undefined || data === null) {
-                    break;
-                }
+        for (let i = 0; i < parts.length; ++i) {
+            const matches = re.exec(parts[i]);
+            if (matches) {
+                let idx = parseFloat(matches[1]);
+                data = data[idx];
+            } else {
+                data = data[parts[i]];
             }
 
+            if (data === undefined || data === null) {
+                break;
+            }
         }
 
         if (data === undefined && this.undefinedEqualsNull) {
