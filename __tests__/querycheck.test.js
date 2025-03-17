@@ -47,6 +47,18 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
+        test('$eq with null value // null == null', () => {
+            const qc = new QueryCheck({ myNull: null });
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$eq with null value // string != null', () => {
+            const qc = new QueryCheck({ myString: null });
+            qc.setStrictMode(strictMode);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
         test('$eq short syntax sub-variable // string == string', () => {
             const qc = new QueryCheck({ "myObject.userName": "maurice" });
             qc.setStrictMode(strictMode);
@@ -134,12 +146,6 @@ function simpleTests(strictMode) {
             const qc = new QueryCheck({ myNull: "" });
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).not.toBeTruthy();
-        });
-
-        test('$eq short syntax // null == null', () => {
-            const qc = new QueryCheck({ myNull: null });
-            qc.setStrictMode(strictMode);
-            expect(qc.test(vars)).toBeTruthy();
         });
 
         test('$eq short syntax // undefined == ""', () => {
@@ -391,6 +397,67 @@ function simpleTests(strictMode) {
             qc.setStrictMode(strictMode);
             expect(qc.test(vars)).toBeTruthy();
         });
+
+        test('test with null input data', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test(null)).toThrow(TypeError);
+            } else {
+                expect(qc.test(null)).toBeFalsy();
+            }
+        });
+
+        test('test with non-hash data (array)', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test([])).toThrow(TypeError);
+            } else {
+                expect(qc.test([])).toBeFalsy();
+            }
+        });
+
+        test('test with non-hash data (string)', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test("not an object")).toThrow(TypeError);
+            } else {
+                expect(qc.test("not an object")).toBeFalsy();
+            }
+        });
+
+        test('test with non-hash data (number)', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test(42)).toThrow(TypeError);
+            } else {
+                expect(qc.test(42)).toBeFalsy();
+            }
+        });
+
+        test('test with non-hash data (boolean)', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test(true)).toThrow(TypeError);
+            } else {
+                expect(qc.test(true)).toBeFalsy();
+            }
+        });
+
+        test('test with non-hash data (undefined)', () => {
+            const qc = new QueryCheck({ myString: "this is a string" });
+            qc.setStrictMode(strictMode);
+            if (strictMode) {
+                expect(() => qc.test(undefined)).toThrow(TypeError);
+            } else {
+                expect(qc.test(undefined)).toBeFalsy();
+            }
+        });
+
     });
 }
 
