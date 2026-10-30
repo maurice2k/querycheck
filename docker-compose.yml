@@ -1,0 +1,31 @@
+x-node: &node
+  volumes:
+    - ./src:/app/src:ro
+    - ./__tests__:/app/__tests__:ro
+    - ./bench:/app/bench:ro
+    - ./index.d.ts:/app/index.d.ts:ro
+    - ./tsconfig.json:/app/tsconfig.json:ro
+    - ./types:/app/types:ro
+    - ./README.md:/app/README.md:ro
+
+services:
+  node20:
+    <<: *node
+    build:
+      context: .
+      args:
+        NODE_VERSION: "20"
+
+  node22:
+    <<: *node
+    build:
+      context: .
+      args:
+        NODE_VERSION: "22"
+
+  node24:
+    <<: *node
+    build:
+      context: .
+      args:
+        NODE_VERSION: "24"

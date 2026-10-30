@@ -1,6 +1,7 @@
 'use strict';
 
 const QueryCheck = require('../src/querycheck.js');
+const UnknownVariableException = QueryCheck.UnknownVariableException;
 
 const vars = {
     now: {
@@ -33,7 +34,8 @@ const vars = {
         userName: "maurice",
         firstName: "First",
         lastName: "Last"
-    }
+    },
+    myEmptyArray: []
 };
 
 
@@ -65,26 +67,23 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax non-existant sub-variable // undefined == string', () => {
+        test('$eq short syntax non-existant sub-variable // missing == string throws', () => {
             const qc = new QueryCheck({ "myObject.myUndefined": "some string" });
             qc.setStrictMode(strictMode);
-            if (!strictMode) {
-                expect(qc.test(vars)).not.toBeTruthy();
-            } else {
-                expect(() => qc.test(vars)).toThrow(TypeError);
-            }
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
         });
 
-        test('$eq short syntax non-existant sub-variable // undefined == null', () => {
-            const qc = new QueryCheck({ "myObject.myUndefined": null });
+        test('$eq short syntax non-existant sub-variable // missing == string without throwing', () => {
+            const qc = new QueryCheck({ "myObject.myUndefined": "some string" });
             qc.setStrictMode(strictMode);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).not.toBeTruthy();
         });
 
-        test('$eq short syntax non-existant sub-variable // undefined == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax non-existant sub-variable // missing == null without throwing', () => {
             const qc = new QueryCheck({ "myObject.myUndefined": null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).toBeTruthy();
         });
 
@@ -148,27 +147,38 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).not.toBeTruthy();
         });
 
-        test('$eq short syntax // undefined == ""', () => {
+        test('$eq short syntax // missing == "" without throwing', () => {
             const qc = new QueryCheck({ myUndefined: "" });
             qc.setStrictMode(strictMode);
-            if (!strictMode) {
-                expect(qc.test(vars)).not.toBeTruthy();
-            } else {
-                expect(() => qc.test(vars)).toThrow(TypeError);
-            }
-        });
-
-        test('$eq short syntax // undefined == null', () => {
-            const qc = new QueryCheck({ myUndefined: null });
-            qc.setStrictMode(strictMode);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).not.toBeTruthy();
         });
 
-        test('$eq short syntax // undefined == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax // missing == null throws', () => {
             const qc = new QueryCheck({ myUndefined: null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+        });
+
+        test('$eq short syntax // missing == null without throwing', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            qc.setStrictMode(strictMode);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$eq short syntax // present undefined counts as missing', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            qc.setStrictMode(strictMode);
+            expect(() => qc.test({ ...vars, myUndefined: undefined })).toThrow(UnknownVariableException);
+        });
+
+        test('$eq short syntax // inherited properties are not resolved', () => {
+            for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'myLookup.constructor', 'myArrayOfInts.length']) {
+                const qc = new QueryCheck({ [name]: { "$ne": null } });
+                qc.setStrictMode(strictMode);
+                expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+            }
         });
 
         test('$eq short syntax // array[1] == object', () => {
@@ -183,31 +193,30 @@ function simpleTests(strictMode) {
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // array[20] == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax // array[20] == null without throwing', () => {
             const qc = new QueryCheck({ "myArrayOfObjects[20]": null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // array[20].a.b.c.d == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax // array[20].a.b.c.d == null without throwing', () => {
             const qc = new QueryCheck({ "myArrayOfObjects[20].a.b.c.d": null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // myNull.but.this.does.not.exist == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax // myNull.but.this.does.not.exist == null (stops at null)', () => {
             const qc = new QueryCheck({ "myNull.but.this.does.not.exist": null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
             expect(qc.test(vars)).toBeTruthy();
         });
 
-        test('$eq short syntax // myInt.but.this.does.not.exist == null with setUndefinedEqualsNull(true)', () => {
+        test('$eq short syntax // myInt.but.this.does.not.exist == null without throwing', () => {
             const qc = new QueryCheck({ "myInt.but.this.does.not.exist": null });
             qc.setStrictMode(strictMode);
-            qc.setUndefinedEqualsNull(true);
+            qc.setThrowOnUnknownVariable(false);
             expect(qc.test(vars)).toBeTruthy();
         });
 
@@ -302,7 +311,7 @@ function simpleTests(strictMode) {
             if (!strictMode) {
                 expect(qc.test(vars)).toBeTruthy();
             } else {
-                expect(qc.test(vars)).toBeTruthy();
+                expect(() => qc.test(vars)).toThrow(QueryCheck.StrictTypeError);
             }
         });
 
@@ -312,7 +321,7 @@ function simpleTests(strictMode) {
             if (!strictMode) {
                 expect(qc.test(vars)).toBeFalsy();
             } else {
-                expect(qc.test(vars)).toBeTruthy();
+                expect(() => qc.test(vars)).toThrow(QueryCheck.StrictTypeError);
             }
         });
 
@@ -725,6 +734,1059 @@ function extendingTests(strictMode) {
 }
 
 
+function expectSyntaxError(fn, message) {
+    expect(fn).toThrow(SyntaxError);
+    expect(fn).toThrow(message);
+}
+
+function exprTests() {
+
+    describe('$expr aggregation expressions', () => {
+
+        test('$expr with $gt and $add // (field1 + field2) > 10', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gt': [
+                        {'$add': ['$myInt', '$myFloat']},
+                        200
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr compare two fields // spent > budget', () => {
+            const data = {spent: 450, budget: 400};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gt': ['$spent', '$budget']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $subtract // (price - discount) < 100', () => {
+            const data = {price: 100, discount: 20};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$lt': [
+                        {'$subtract': ['$price', '$discount']},
+                        90
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $multiply // (field1 * field2) >= 35', () => {
+            const data = {field1: 5, field2: 7};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gte': [
+                        {'$multiply': ['$field1', '$field2']},
+                        35
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $divide // (field1 / field2) == 2', () => {
+            const data = {field1: 10, field2: 5};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$divide': ['$field1', '$field2']},
+                        2
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $mod // (field1 % field2) == 2', () => {
+            const data = {field1: 17, field2: 5};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$mod': ['$field1', '$field2']},
+                        2
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $cond // conditional discount calculation', () => {
+            const data = {qty: 150, price: 100};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$lt': [
+                        {
+                            '$cond': {
+                                'if': {'$gte': ['$qty', 100]},
+                                'then': {'$multiply': ['$price', 0.5]},
+                                'else': {'$multiply': ['$price', 0.75]}
+                            }
+                        },
+                        60
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with complex nested expression', () => {
+            const data = {field1: 5, field2: 7};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$add': [
+                            {'$multiply': ['$field1', 2]},
+                            {'$subtract': ['$field2', 3]}
+                        ]},
+                        14
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $ne // field1 != field2', () => {
+            const data = {field1: 5, field2: 7};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$ne': ['$field1', '$field2']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $lte // field1 <= field2', () => {
+            const data = {field1: 5, field2: 5};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$lte': ['$field1', '$field2']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr returns false when condition not met', () => {
+            const data = {field1: 5, field2: 7};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gt': [
+                        {'$add': ['$field1', '$field2']},
+                        20
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with operandEvaluator for custom $var resolution', () => {
+            const data = {price: 100, multiplier: 2};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gt': [
+                        {'$multiply': [{'$var': 'price'}, {'$var': 'multiplier'}]},
+                        150
+                    ]
+                }
+            });
+
+            const varFunc = function (params, input) {
+                if (params && typeof params === 'object' && !Array.isArray(params) && params['$var'] !== undefined) {
+                    return qc.getVariableValue(params['$var'], input);
+                }
+                return params;
+            };
+
+            qc.setOperandEvaluator(varFunc);
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $add treats field names without $ as literal strings', () => {
+            const data = {field1: 10, field2: 20};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$add': ['field1', 5]},
+                        'field15'
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expectSyntaxError(() => qc.test(data), '$add operands must be numeric');
+        });
+
+        test('$expr with $add using correct $field syntax works', () => {
+            const data = {field1: 10, field2: 20};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$add': ['$field1', '$field2']},
+                        30
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr combined with regular field queries using $and', () => {
+            const data = {
+                category: 'electronics',
+                price: 100,
+                discount: 20,
+                inStock: true
+            };
+            const qc = new QueryCheck({
+                '$and': [
+                    {category: 'electronics'},
+                    {inStock: true},
+                    {
+                        '$expr': {
+                            '$lt': [
+                                {'$subtract': ['$price', '$discount']},
+                                90
+                            ]
+                        }
+                    }
+                ]
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr combined with $and returns false when expression fails', () => {
+            const data = {
+                category: 'electronics',
+                price: 100,
+                discount: 10,
+                inStock: true
+            };
+            const qc = new QueryCheck({
+                '$and': [
+                    {category: 'electronics'},
+                    {inStock: true},
+                    {
+                        '$expr': {
+                            '$lt': [
+                                {'$subtract': ['$price', '$discount']},
+                                90
+                            ]
+                        }
+                    }
+                ]
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[true] returns false', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [true]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[false] returns true', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [false]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[null] returns true', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [null]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[0] returns true', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [0]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[0.0] returns true (float zero is falsy in MongoDB)', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [0.0]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[1] returns false', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [1]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[137] returns false', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [137]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[[false]] returns false (array is truthy)', () => {
+            const qc = new QueryCheck({'$expr': {'$not': [[false]]}});
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[$gt[$qty, 250]]', () => {
+            const data = {qty: 200};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$gt': ['$qty', 250]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[$gt[$qty, 250]] returns false when qty > 250', () => {
+            const data = {qty: 300};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$gt': ['$qty', 250]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[$eq[field1, field2]] when fields are equal', () => {
+            const data = {field1: 100, field2: 100};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$eq': ['$field1', '$field2']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[$eq[field1, field2]] when fields are not equal', () => {
+            const data = {field1: 100, field2: 200};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$eq': ['$field1', '$field2']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not // $not[$eq[field, literal]] when equal', () => {
+            const data = {status: 'active'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$eq': ['$status', 'active']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $not // $not[$eq[field, literal]] when not equal', () => {
+            const data = {status: 'inactive'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$eq': ['$status', 'active']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $in // value in array returns true', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['banana', ['apple', 'banana', 'cherry']]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $in // value not in array returns false', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['orange', ['apple', 'banana', 'cherry']]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $in // field value in array', () => {
+            const data = {fruit: 'banana', in_stock: ['apple', 'banana', 'cherry']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['$fruit', '$in_stock']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $in // field value not in array', () => {
+            const data = {fruit: 'orange', in_stock: ['apple', 'banana', 'cherry']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['$fruit', '$in_stock']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $in // number in array', () => {
+            const data = {value: 137};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['$value', [100, 137, 200]]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $in // null in array', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': [null, [1, 2, null, 3]]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $in // empty array returns false', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['banana', '$myEmptyArray']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeFalsy();
+        });
+
+        test('$expr with $in // object in array of objects', () => {
+            const data = {
+                item: {x: 10, y: 11},
+                items: [{x: 10, y: 11}, {x: 20, y: 21}]
+            };
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': ['$item', '$items']
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not and $in // $not[$in[value, array]]', () => {
+            const data = {fruit: 'orange', in_stock: ['apple', 'banana', 'cherry']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': ['$fruit', '$in_stock']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not and $in // $not[$in[value, array]] returns false when value is in array', () => {
+            const data = {fruit: 'banana', in_stock: ['apple', 'banana', 'cherry']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': ['$fruit', '$in_stock']}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $not and $in // $not[$in[literal, literal array]]', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': ['grape', ['apple', 'banana', 'cherry']]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr with $not and $in // $not[$in[number, number array]]', () => {
+            const data = {value: 42};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': ['$value', [10, 20, 30, 40]]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not and $in // $not[$in[computed value, array]]', () => {
+            const data = {price: 100, discount: 30, invalid_prices: [50, 60, 80]};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': [
+                            {'$subtract': ['$price', '$discount']},
+                            '$invalid_prices'
+                        ]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $not and $in // $not[$in[computed value, array]] returns false when value is in array', () => {
+            const data = {price: 100, discount: 20, invalid_prices: [50, 60, 80]};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$not': [
+                        {'$in': [
+                            {'$subtract': ['$price', '$discount']},
+                            '$invalid_prices'
+                        ]}
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeFalsy();
+        });
+
+        test('$expr with $in and comparison // check if discounted price is in valid range', () => {
+            const data = {price: 100, discount: 20, valid_prices: [50, 80, 100, 150]};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$in': [
+                        {'$subtract': ['$price', '$discount']},
+                        '$valid_prices'
+                    ]
+                }
+            });
+            qc.setStrictMode(false);
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // returns array length', () => {
+            const data = {colors: ['blue', 'black', 'red']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$size': '$colors'}, 3]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // empty array returns 0', () => {
+            const data = {colors: []};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$size': '$colors'}, 0]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // use with $gt for minimum elements', () => {
+            const data = {tags: ['php', 'mongodb', 'querycheck', 'testing']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gt': [{'$size': '$tags'}, 3]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // use with $lt for maximum elements', () => {
+            const data = {items: ['a', 'b']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$lt': [{'$size': '$items'}, 5]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // use with $gte', () => {
+            const data = {items: ['x', 'y', 'z']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$gte': [{'$size': '$items'}, 3]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // throws on non-array', () => {
+            const data = {name: 'John'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$size': '$name'}, 4]
+                }
+            });
+            expectSyntaxError(() => qc.test(data), '$size: argument must resolve to an array');
+        });
+
+        test('$expr with $size // throws on associative array (object)', () => {
+            const data = {data: {x: 1, y: 2}};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$size': '$data'}, 2]
+                }
+            });
+            expectSyntaxError(() => qc.test(data), '$size: argument must resolve to an array');
+        });
+
+        test('$expr with $size // combined with $cond', () => {
+            const data = {items: ['a', 'b', 'c', 'd', 'e']};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$cond': {
+                            'if': {'$gte': [{'$size': '$items'}, 5]},
+                            'then': 'bulk',
+                            'else': 'single'
+                        }},
+                        'bulk'
+                    ]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $size // with literal array', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$size': [1, 2, 3, 4]}, 4]
+                }
+            });
+            expect(qc.test({dummy: 'value'})).toBeTruthy();
+        });
+
+        test('$expr with array index access // $myArray[0] and $myList[0].amount', () => {
+            const data = {
+                myArray: [10, 20, 30],
+                myList: [
+                    {amount: 100, name: 'first'},
+                    {amount: 200, name: 'second'}
+                ]
+            };
+
+            let qc = new QueryCheck({
+                '$expr': {
+                    '$eq': ['$myArray[0]', 10]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+
+            qc = new QueryCheck({
+                '$expr': {
+                    '$eq': ['$myList[0].amount', 100]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+
+            qc = new QueryCheck({
+                '$expr': {
+                    '$lt': ['$myList[0].amount', '$myList[1].amount']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+
+            qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$add': ['$myArray[0]', '$myArray[1]']},
+                        30
+                    ]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with deeply nested array index access // $myObj.sub1.sub2.myList[0].amount', () => {
+            const data = {
+                myObj: {
+                    sub1: {
+                        sub2: {
+                            myList: [
+                                {amount: 42, name: 'first'},
+                                {amount: 99, name: 'second'}
+                            ]
+                        }
+                    }
+                }
+            };
+
+            let qc = new QueryCheck({
+                '$expr': {
+                    '$eq': ['$myObj.sub1.sub2.myList[0].amount', 42]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+
+            qc = new QueryCheck({
+                '$expr': {
+                    '$eq': ['$myObj.sub1.sub2.myList[1].name', 'second']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $and // check $size >= 1 before accessing myList[0]', () => {
+            const data = {
+                myList: [
+                    {amount: 100, name: 'first'}
+                ]
+            };
+            const qc = new QueryCheck({
+                '$and': [
+                    {'$expr': {'$gte': [{'$size': '$myList'}, 1]}},
+                    {'$expr': {'$eq': ['$myList[0].amount', 100]}}
+                ]
+            });
+            expect(qc.test(data)).toBeTruthy();
+
+            // Short-circuits on the first condition and never accesses myList[0].
+            expect(qc.test({myList: []})).toBeFalsy();
+        });
+
+        test('$expr with $toLower // converts string to lowercase', () => {
+            const data = {name: 'JOHN DOE'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$toLower': '$name'}, 'john doe']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $toUpper // converts string to uppercase', () => {
+            const data = {name: 'john doe'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$toUpper': '$name'}, 'JOHN DOE']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $toLower // case-insensitive comparison of two fields', () => {
+            const data = {field1: 'Hello World', field2: 'HELLO WORLD'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [
+                        {'$toLower': '$field1'},
+                        {'$toLower': '$field2'}
+                    ]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $toLower // handles unicode characters', () => {
+            const data = {name: 'MÜLLER'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$toLower': '$name'}, 'müller']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $toUpper // throws on non-string', () => {
+            const data = {value: 123};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$toUpper': '$value'}, '123']
+                }
+            });
+            expectSyntaxError(() => qc.test(data), '$toUpper: argument must resolve to a string');
+        });
+
+        test('$expr with $substr // extracts substring by codepoint', () => {
+            const data = {text: 'Hello World'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$substr': ['$text', 0, 5]}, 'Hello']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $substr // handles unicode codepoints', () => {
+            const data = {text: 'Müller'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$substr': ['$text', 0, 3]}, 'Mül']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $substr // negative length returns rest of string', () => {
+            const data = {text: 'Hello World'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$substr': ['$text', 6, -1]}, 'World']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $substrBytes // extracts substring by bytes', () => {
+            const data = {text: 'Hello World'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$substrBytes': ['$text', 0, 5]}, 'Hello']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $substrBytes // byte-based on multibyte string', () => {
+            const data = {text: 'Müller'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$substrBytes': ['$text', 0, 1]}, 'M']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $strLenBytes // returns byte length', () => {
+            const data = {text: 'Hello'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$strLenBytes': '$text'}, 5]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $strLenBytes // counts bytes for multibyte chars', () => {
+            const data = {text: 'Müller'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$strLenBytes': '$text'}, 7]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $strLenCP // returns codepoint length', () => {
+            const data = {text: 'Hello'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$strLenCP': '$text'}, 5]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $strLenCP // counts codepoints for multibyte chars', () => {
+            const data = {text: 'Müller'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$strLenCP': '$text'}, 6]
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $trim // removes whitespace from both ends', () => {
+            const data = {text: '  hello  '};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$trim': {input: '$text'}}, 'hello']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $trim // removes specified chars', () => {
+            const data = {text: '---hello---'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$trim': {input: '$text', chars: '-'}}, 'hello']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $ltrim // removes whitespace from left', () => {
+            const data = {text: '  hello  '};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$ltrim': {input: '$text'}}, 'hello  ']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $rtrim // removes whitespace from right', () => {
+            const data = {text: '  hello  '};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$rtrim': {input: '$text'}}, '  hello']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $concat // concatenates strings', () => {
+            const data = {first: 'Hello', second: 'World'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$concat': ['$first', ' ', '$second']}, 'Hello World']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $concat // concatenates multiple strings', () => {
+            const data = {a: 'a', b: 'b', c: 'c'};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$concat': ['$a', '$b', '$c']}, 'abc']
+                }
+            });
+            expect(qc.test(data)).toBeTruthy();
+        });
+
+        test('$expr with $concat // throws on non-string', () => {
+            const data = {text: 'hello', num: 123};
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': [{'$concat': ['$text', '$num']}, 'hello123']
+                }
+            });
+            expectSyntaxError(() => qc.test(data), '$concat: all arguments must resolve to strings');
+        });
+
+    });
+}
+
+
+function unknownVariableTests() {
+
+    describe('Throw on unknown variable', () => {
+
+        test('missing variable throws UnknownVariableException when enabled', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+            expect(() => qc.test(vars)).toThrow("Variable 'myUndefined' is not defined");
+        });
+
+        test('missing nested variable throws when enabled', () => {
+            const qc = new QueryCheck({ "myObject.myUndefined": "some string" });
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+            expect(() => qc.test(vars)).toThrow("Variable 'myObject.myUndefined' is not defined");
+        });
+
+        test('missing array index throws when enabled', () => {
+            const qc = new QueryCheck({ "myArrayOfObjects[20]": null });
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+        });
+
+        test('path through a non-object throws when enabled', () => {
+            const qc = new QueryCheck({ "myInt.but.this.does.not.exist": null });
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+        });
+
+        test('existing null is not an unknown variable', () => {
+            const qc = new QueryCheck({ myNull: null });
+            qc.setThrowOnUnknownVariable(true);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('path through an existing null does not throw', () => {
+            const qc = new QueryCheck({ "myNull.but.this.does.not.exist": null });
+            qc.setThrowOnUnknownVariable(true);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('setUndefinedEqualsNull was removed', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            expect(qc.setUndefinedEqualsNull).toBeUndefined();
+        });
+
+        test('enabled by default, missing variable throws', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            expect(() => qc.test(vars)).toThrow(UnknownVariableException);
+        });
+
+        test('disabled, missing variable equals null', () => {
+            const qc = new QueryCheck({ myUndefined: null });
+            qc.setThrowOnUnknownVariable(false);
+            expect(qc.test(vars)).toBeTruthy();
+        });
+
+        test('$expr missing field throws when enabled', () => {
+            const qc = new QueryCheck({
+                '$expr': {
+                    '$eq': ['$missing', 1]
+                }
+            });
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.test({ other: 1 })).toThrow(UnknownVariableException);
+            expect(() => qc.test({ other: 1 })).toThrow("Variable 'missing' is not defined");
+        });
+
+        test('getVariableValue throws when enabled', () => {
+            const qc = new QueryCheck({});
+            qc.setThrowOnUnknownVariable(true);
+            expect(() => qc.getVariableValue('missing', { other: 1 })).toThrow(UnknownVariableException);
+        });
+
+    });
+}
+
+
 describe('Testing in STANDARD mode', () => {
     simpleTests(false);
     combinedTests(false);
@@ -736,5 +1798,8 @@ describe('Testing in STRICT mode', () => {
     combinedTests(true);
     extendingTests(true);
 });
+
+exprTests();
+unknownVariableTests();
 
 /**/
